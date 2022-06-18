@@ -1,4 +1,4 @@
-#!/home/pacs/tim00/bin/.venv/bin/python
+#!/home/pacs/xyz00/bin/.venv/bin/python
 
 # see https://thispointer.com/python-get-list-of-all-running-processes-and-sort-by-highest-memory-usage/
 import psutil

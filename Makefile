@@ -2,9 +2,9 @@ VENV := . .venv/bin/activate &&
 
 all:
 	@echo "help:"
-	@echo "  make quickstart"
+	@echo "  make init"
 
-quickstart: create_venv pip_packages
+init: create_venv pip_packages copy_scripts
 
 pip_packages:
 	${VENV} pip3 install --upgrade pip
@@ -14,3 +14,5 @@ pip_packages:
 create_venv:
 	python3 -m venv .venv
 
+copy_scripts:
+	PAC=`id -nu` && for f in *.py; do cat $$f | sed -e "s/xyz00/$$PAC/g" > $${f%.*}; chmod a+x $${f%.*}; done
