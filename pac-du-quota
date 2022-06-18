@@ -271,7 +271,7 @@ function spaceString {
 
   TEMP=$(($in_space / 1024))
   TEMP=`echo $TEMP | wc -c`
-  out_space=`printf "| %10d.%03d MB " $(($in_space / 1024)) $(($in_space % 1024))`
+  out_space=`printf "| %10d.%03d MB " $(($in_space / 1000)) $(($in_space % 1000))`
   TEMP=`echo "$in_label:                               " | cut -c -32`
   out_percent=`printf "|   %6.2f %% " $in_percent`
   out_percpac=`printf "|   %6.2f %% |" $in_percpac`
