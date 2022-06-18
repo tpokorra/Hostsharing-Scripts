@@ -1,0 +1,367 @@
+#! /bin/bash
+
+####################################
+##  pac-du-quota
+##
+##  bestimme Plattenbenutzung oder
+##  Gruppenquota fuer alle User eines
+##  Hostsharing Pakets
+##
+## --------------------------------
+##
+##  Umgebung  : Hostsharing-Paket
+##  Lizenz    : GPL
+##  Autor     : Andreas Loesch
+##  Datum     : 13.09.2021
+##  Version   : 1.0.0
+##
+## --------------------------------
+##
+##  Aufruf
+##  ------
+##  pac-du-quota
+##
+##
+##  Konfiguration
+##  -------------
+##  nicht noetig
+##
+##  History
+##  -------
+##  1.0 13.09.21 Bugfix -- alle Bekannten Fehler raus :)
+##  0.9  1309.21 - Lokalisierungsproblem geloest (bc immer dezimalpunkt, printf in de mit Komma...)
+##  0.8.2 09.09.21 - Zahlen vergroessert 
+##  0.8.1 07.09.21 - mountpfade variablilisiert
+##  0.8 07.09.21 - Messung Storage HDD hinzugefuegt
+##  0.7 07.09.21 - CVS removed, CUT-Fehler gefixed 
+##  0.6 21.12.04 - CVS-Id-tag hinzugefuegt und in meinem Paket-CVS gespeichert
+##  0.5 17.12.04 - quota-Abfrage auf variable Gruppen ID erweitert
+###################################
+
+
+##
+## Lokalization
+LANG=en_US.UTF8
+
+############################################################
+## Speicherplatz
+############################################################
+HOMEDIR=`findmnt -n -o SOURCE --target ~`
+STORAGE=`findmnt -n -o SOURCE --target /home/storage`
+
+############################################################
+## globale Variablen
+############################################################
+# Array fuer Speicherplatz
+SPACE=
+# Array fuer Usernamen
+NAME=
+# wieviele Array-Elemente
+COUNTER=
+# kummulierter Platz
+TOTALSPACE=
+# Array: prozentualer anteil am gesamtverbrauch
+TOTALPERCENT=
+# Array: prozentualer Anteil an Quota
+PACPERCENT=
+# Belgter Platz in Prozent
+QUOTAPERCENT=
+# Paketquota
+PACQUOTA=
+# Harte Paketquota
+HARDQUOTA=
+# nach quota genutzte bloecke
+BLOCKS=
+# grace time bzgl bloecke
+BLOCKGRACE='keine'
+# inode nutzung
+FILES=
+#inodequota
+FILEQUOTA=
+#inode hardlimit
+FILELIMIT=
+#inode gracetime
+FILEGRACE='keine'
+
+# Paket-ID bestimmen
+PAC=`id -nu`
+
+# Gruppen/-IDs
+GRP=`id -g`
+ADMGRP=`id -G | sed -e "s/$GRP//g"`
+ADMGRP=`echo $ADMGRP`
+
+################################################################
+## Funktionen
+################################################################
+
+
+
+#--------------------------------
+# trennunglinie schreiben
+function dividerLine {
+  echo "--------------------------------------------------------------------------------"
+}
+
+#--------------------------------
+# trennunglinie schreiben
+function doubleDividerLine {
+  echo "================================================================================"
+}
+
+#--------------------------------
+# SpaceHeader ausgeben
+function header {
+  echo "                                 |   Speicher-       |   Anteil an Speicher    |"
+  echo " Benutzername                    |   platz (MB)      |  benutzt   |   Quota    |"
+  dividerLine
+}
+
+#--------------------------------
+# quota lesen und parsen
+function readQuota {
+  in_storage=$1
+
+  QUOTA=`quota -g | grep $in_storage`
+
+  ENTRIES=`echo $QUOTA | wc -w`
+  PACQUOTA=`echo $QUOTA | cut -d ' ' -f 3`
+  HARDQUOTA=`echo $QUOTA | cut -d ' ' -f 4`
+  BLOCKS=`echo $QUOTA | cut -d ' ' -f 2`
+  # bei 7 keine Grace-period!
+  if [[ $ENTRIES -le 7 ]]
+  then
+    FILES=`echo $QUOTA | cut -d ' ' -f 5`
+    FILEQUOTA=`echo $QUOTA | cut -d ' ' -f 6`
+    FILELIMIT=`echo $QUOTA | cut -d ' ' -f 7`
+  else
+    # mind 1 grace
+    COUNT=`echo $BLOCKS | wc -c`
+    GRACE=`echo $BLOCKS | cut -c $(($COUNT-1))`
+    if [[ $GRACE = '*' ]]
+    then
+      # blockquota ueberschritten Stern abschneiden
+      BLOCKS=`echo $BLOCKS | cut -c -$(($COUNT-2))`
+      # jetzt steht ein grace-Dazwischen
+      BLOCKGRACE=`echo $QUOTA | cut -d ' ' -f 5`
+      FILES=`echo $QUOTA | cut -d ' ' -f 6`
+      FILEQUOTA=`echo $QUOTA | cut -d ' ' -f 7`
+      FILELIMIT=`echo $QUOTA | cut -d ' ' -f 8`
+      # evtl noch ei 2. grace
+      COUNT=`echo $FILES | wc -c`
+      GRACE=`echo $FILES | cut -c $(($COUNT-1))`
+      if [[ $GRACE = '*' ]]
+      then
+        # filequota ueberschritten Stern abschneiden
+	FILES=`echo $FILES | cut -c -$(($COUNT-2))`
+	# jetzt steht ein grace-Dazwischen
+	FILEGRACE=`echo $QUOTA | cut -d ' ' -f 9`
+      fi
+    fi
+  fi
+  # wieviel der Quota ist denn verbraucht
+  QUOTAPERCENT=`echo "( $BLOCKS / $PACQUOTA ) * 100" | bc -l`
+}
+
+#---------------------------
+# du -s fuer alle User aufrufen
+function collectSpaceHome {
+ # Temporary-Userfile
+  USERFILE=/tmp/$PAC-usrtempfile-$(date +'%m%d%Y').txt
+  
+  # goto-Homedir
+  cd ~
+  # wenn Benutzer existieren -> speichern
+  if [ -d ~/users ]
+  then
+    ls users > $USERFILE
+  fi
+  # Admin-Speicherplatz:
+  TEMP=`du -s -X $USERFILE`
+  #temp-file loeschen
+  rm $USERFILE
+  
+  # counter initialisieren
+  COUNTER=0
+  # admin ist gleich PAC
+  NAME[$COUNTER]=$PAC
+  SPACE[$COUNTER]=`echo $TEMP | sed -e 's/\([^ ]*\).*/\1/g'`
+  # Wenn User exisiteren aufsammeln
+  if [ -d ~/users ]; then
+    cd ~/users
+    for USER in *
+    do
+      let COUNTER=COUNTER+1
+      TEMP=`sudo -u "$PAC-$USER" du -s "$USER"`
+      SPACE[$COUNTER]=`echo $TEMP | sed -e 's/\([^ ]*\).*/\1/g'`
+      NAME[$COUNTER]="$PAC-$USER"
+    done
+  fi
+}
+
+#---------------------------
+# du -s fuer alle User aufrufen
+function collectSpaceStorage {
+ # Temporary-Userfile
+  USERFILE=/tmp/$PAC-usrstrtempfile-$(date +'%m%d%Y').txt
+  
+  # goto-storage
+  cd /home/storage/$PAC
+  # wenn Benutzer existieren -> speichern
+  if [ -d /home/storage/$PAC/users ]
+  then
+    ls -I "_" users > $USERFILE
+  fi
+  # Admin-Speicherplatz:
+  TEMP=`du -s -X $USERFILE`
+  #temp-file loeschen
+  rm $USERFILE
+  
+  # counter initialisieren
+  COUNTER=0
+  # admin ist gleich PAC
+  NAME[$COUNTER]=$PAC
+  SPACE[$COUNTER]=`echo $TEMP | sed -e 's/\([^ ]*\).*/\1/g'`
+  # Wenn User exisiteren aufsammeln
+  if [ -d /home/storage/$PAC/users ]; then
+    cd /home/storage/$PAC/users
+    for USER in *
+    do
+      ## sonderfall
+      if [ "$USER" != "_" ]
+      then
+        let COUNTER=COUNTER+1
+        TEMP=`sudo -u "$PAC-$USER" du -s "$USER"`
+        SPACE[$COUNTER]=`echo $TEMP | sed -e 's/\([^ ]*\).*/\1/g'`
+        NAME[$COUNTER]="$PAC-$USER"
+      fi
+    done
+  fi
+}
+		
+#--------------------------------
+# summiere uber SPACE-Array
+# und bestimme Anteile
+function calcSpace {
+  TOTALSPACE=0
+  for INDEX in $(seq 0 $COUNTER)
+  do
+    let "TOTALSPACE = $TOTALSPACE + ${SPACE[INDEX]}"
+  done
+  
+  for INDEX in $(seq 0 $COUNTER)
+  do
+    if [[ $TOTALSPACE -gt 0 ]]
+    then
+      TOTALPERCENT[$INDEX]=`echo "(${SPACE[$INDEX]} / $TOTALSPACE ) * 100" | bc -l`
+    else 
+      TOTALPERCENT[$INDEX]=0
+    fi
+    PACPERCENT[$INDEX]=`echo "(${SPACE[$INDEX]} / $PACQUOTA ) * 100" | bc -l`
+  done
+}
+
+#--------------------------------
+# Speicherplatz formatiert ausgeben
+function spaceString {
+  in_label=$1
+  in_space=$2
+  in_percent=$3
+  in_percpac=$4
+
+  TEMP=$(($in_space / 1024))
+  TEMP=`echo $TEMP | wc -c`
+  out_space=`printf "| %10d.%03d MB " $(($in_space / 1024)) $(($in_space % 1024))`
+  TEMP=`echo "$in_label:                               " | cut -c -32`
+  out_percent=`printf "|   %6.2f %% " $in_percent`
+  out_percpac=`printf "|   %6.2f %% |" $in_percpac`
+  echo " $TEMP$out_space$out_percent$out_percpac"
+}
+
+function storageTable {
+  in_storage=$1
+
+readQuota $in_storage
+if [[ $in_storage == $HOMEDIR ]]
+then
+  collectSpaceHome
+else
+  collectSpaceStorage
+fi
+
+calcSpace
+header
+# alle Arrayeintraege
+for INDEX in $(seq 0 $COUNTER)
+do
+  spaceString ${NAME[INDEX]} ${SPACE[INDEX]} ${TOTALPERCENT[INDEX]} ${PACPERCENT[INDEX]}
+done
+
+dividerLine
+
+# Summe
+spaceString "Summe" $TOTALSPACE 100 $QUOTAPERCENT
+let "SUM=$PACQUOTA - $TOTALSPACE"
+if [[ $SUM -lt 0 ]]
+then
+  echo " WARNUNG: Quotaueberschreitung! "
+fi
+doubleDividerLine
+echo " Quotauebersicht "
+dividerLine
+
+B1=`echo "($BLOCKS / $PACQUOTA) * 100" | bc -l`
+B2=`echo "($BLOCKS / $HARDQUOTA) * 100" | bc -l`
+TEMP=`printf "Belegter Plattenplatz:              %10d.%03d MB  " $(( $BLOCKS / 1024)) $(( $BLOCKS % 1024 ))`
+echo " $TEMP "
+TEMP=`printf "Paketquota:                         %10d.%03d MB     (%6.2f %% belegt)" $(( $PACQUOTA / 1024)) $(( $PACQUOT
+A % 1024 )) $B1`
+echo " $TEMP "
+TEMP=`printf "Hartes Limit:                       %10d.%03d MB     (%6.2f %% belegt)" $(( $HARDQUOTA / 1024)) $(( $HARDQU
+OTA % 1024 )) $B2`
+echo " $TEMP "
+echo         " GraceTime:                             $BLOCKGRACE"
+
+dividerLine
+
+B1=`echo "($FILES / $FILEQUOTA) * 100" | bc -l`
+B2=`echo "($FILES / $FILELIMIT) * 100" | bc -l`
+TEMP=`printf "Belegte 'inodes':                  %15d  " $FILES`
+echo " $TEMP "
+TEMP=`printf "'inode' Quota:                     %15d        (%6.2f %% belegt)" $FILEQUOTA $B1`
+echo " $TEMP "
+TEMP=`printf "'inode' Limit:                     %15d        (%6.2f %% belegt)" $FILELIMIT $B2`
+echo " $TEMP "
+echo         " GraceTime:                             $FILEGRACE"
+
+
+}
+########################################
+##  Hauptprogramm
+#######################################
+
+CURDIR=`pwd`
+
+doubleDividerLine
+echo " Speicherplatzuebersicht fuer Paket '$PAC'"
+echo " Stand: $(date +'%d.%m.%Y -- %H:%M')"
+dividerLine
+echo " Speicherplatzuebersicht NVMe SSD"
+dividerLine
+storageTable $HOMEDIR
+doubleDividerLine
+echo ""
+echo " Speicherplatzuebersicht HDD Storage"
+dividerLine
+if [ -d /home/storage/$PAC ]
+then
+  storageTable $STORAGE
+else
+  echo "kein HDD Storage gebucht"
+fi
+doubleDividerLine
+
+									 
+cd $CURDIR
+exit 0
+
