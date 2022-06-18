@@ -1,0 +1,14 @@
+#!/bin/bash
+
+if ! [ -d ~/users ]; then
+        echo "kein ~/users Verzeichnis vorhanden - Abbruch"
+        exit 0
+fi
+
+PAC=`id -nu`
+
+cd ${HOME}/users
+for USER in *; do
+    cmd="if [ -d ~/doms ]; then echo; echo '== $PAC-$USER =='; ls ~/doms -1; fi"
+    echo $cmd | sudo -u "${PAC}-${USER}" bash
+done

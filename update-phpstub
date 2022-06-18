@@ -1,0 +1,17 @@
+#!/bin/bash
+
+if ! [ -d ~/users ]; then
+        echo "kein ~/users Verzeichnis vorhanden - Abbruch"
+        exit 0
+fi
+
+PAC=`id -nu`
+cd ${HOME}/users
+
+for USER in *; 
+do
+    cmd="if [ -d ~/doms ]; then cd ~/doms; for domain in *; do if [ -f \$domain/fastcgi-ssl/phpstub ]; then echo 'copy for domain '\$domain; cp /usr/local/src/phpstub/phpstub \$domain/fastcgi-ssl/phpstub; fi; done; fi"
+    echo $cmd | sudo -u ${PAC}-${USER} bash 
+done
+
+
