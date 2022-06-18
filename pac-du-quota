@@ -230,10 +230,14 @@ function collectSpaceStorage {
       ## sonderfall
       if [ "$USER" != "_" ]
       then
-        let COUNTER=COUNTER+1
         TEMP=`sudo -u "$PAC-$USER" du -s "$USER"`
-        SPACE[$COUNTER]=`echo $TEMP | sed -e 's/\([^ ]*\).*/\1/g'`
-        NAME[$COUNTER]="$PAC-$USER"
+        VALUE=`echo $TEMP | sed -e 's/\([^ ]*\).*/\1/g'`
+        if [ $VALUE -gt 0 ]
+        then
+          let COUNTER=COUNTER+1
+          SPACE[$COUNTER]=$VALUE
+          NAME[$COUNTER]="$PAC-$USER"
+        fi
       fi
     done
   fi
