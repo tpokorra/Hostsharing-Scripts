@@ -50,7 +50,7 @@ for proc in psutil.process_iter():
             if processName in ['imap',]:
                 continue
 
-        if args.all is None and m_resident/1024/1024 < 10:
+        if args.all is None and m_resident/1000/1000 < 10:
             continue
 
         processes.append({'processID': processID, 'userName': userName, 'processName': processName, 'm_resident': m_resident})
@@ -64,13 +64,13 @@ for p in sorted(processes, key=lambda x:x['m_resident'], reverse=True):
     if not p['userName'] in total_per_user:
         total_per_user[p['userName']] = 0
     total_per_user[p['userName']] += p['m_resident']
-    print("{0:<6} ::: {1:<25} ::: {2:<40} ::: {3:>10} MB".format(p['processID'], p['userName'], p['processName'], round(p['m_resident']/1024/1024, 1))) 
+    print("{0:<6} ::: {1:<25} ::: {2:<40} ::: {3:>10} MB".format(p['processID'], p['userName'], p['processName'], round(p['m_resident']/1000/1000, 1))) 
 
 print()
 
 for u in total_per_user:
-    print("{0:<25}: Total {1:>10} MB".format(u, round(total_per_user[u]/1024/1024, 1)))
+    print("{0:<25}: Total {1:>10} MB".format(u, round(total_per_user[u]/1000/1000, 1)))
 
 print()
 
-print("Total Resident Memory Usage: {0:>10} MB".format(round(total_m_resident/1024/1024,1)))
+print("Total Resident Memory Usage: {0:>10} MB".format(round(total_m_resident/1000/1000,1)))
