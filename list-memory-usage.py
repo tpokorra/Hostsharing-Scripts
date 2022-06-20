@@ -5,18 +5,22 @@ import psutil
 import argparse
 
 description = """
-Show the processes that are using the most of memory
+Show the processes that are using the most of memory.
+
+First call:
+   make init
+
 Call like this:
-   ./ps_mem_res.py 
+   ./list-memory-usage
    
    filter by user name:
-   ./ps_mem_res.py --user=kanboard
+   ./list-memory-usage --user=kanboard
 
    filter by process name:
-   ./ps_mem_res.py --name=php
+   ./list-memory-usage --name=php
 
    show total:
-   ./ps_mem_res.py --all
+   ./list-memory-usage --all
 """
 parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawDescriptionHelpFormatter)
 
