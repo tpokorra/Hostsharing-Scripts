@@ -7,9 +7,6 @@ import argparse
 description = """
 Show the processes that are using the most of memory.
 
-First call:
-   make init
-
 Call like this:
    ./list-memory-usage
    
