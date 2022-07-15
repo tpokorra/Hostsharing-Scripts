@@ -28,6 +28,9 @@
 ##
 ##  History
 ##  -------
+##  1.2 15.07.22 - Abbruch falls das Skript nicht als Paketbenutzer ausgeführt wird (Timotheus Pokorra)
+##  1.1 18.06.22 - Formatierung von Byte Angaben, Modulo 1000 damit es immer bei 3 Stellen bleibt.
+##                 Ausblenden von Benutzern die kein Storage benutzen. (Timotheus Pokorra)
 ##  1.0 13.09.21 Bugfix -- alle Bekannten Fehler raus :)
 ##  0.9  1309.21 - Lokalisierungsproblem geloest (bc immer dezimalpunkt, printf in de mit Komma...)
 ##  0.8.2 09.09.21 - Zahlen vergroessert 
@@ -345,6 +348,14 @@ echo         " GraceTime:                             $FILEGRACE"
 #######################################
 
 CURDIR=`pwd`
+
+if [[ "$PAC" == *"-"* ]]
+then
+    PAC=`echo $PAC | awk '{split($0,a,"-"); print a[1]}'`
+
+    echo "FEHLER: das Skript muss vom Paketbenutzer $PAC ausgeführt werden!"
+    exit -1
+fi
 
 doubleDividerLine
 echo " Speicherplatzuebersicht fuer Paket '$PAC'"
