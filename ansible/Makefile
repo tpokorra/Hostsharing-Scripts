@@ -2,7 +2,7 @@ PYTHON_VERSION := 3.10.9
 
 help:
 	@echo
-	@echo "Neueres Python installieren, ggfs. mit Ansible"
+	@echo "Neueres Python installieren, ggfs. auch Ansible"
 	@echo "  make install_ansible"
 	@echo "  make install_python"
 
