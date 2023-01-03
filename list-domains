@@ -7,6 +7,8 @@ fi
 
 PAC=`id -nu`
 
+if [ -d ~/doms ]; then echo; echo "== $PAC =="; ls ~/doms -1; fi
+
 cd ${HOME}/users
 for USER in *; do
     cmd="if [ -d ~/doms ]; then echo; echo '== $PAC-$USER =='; ls ~/doms -1; fi"
