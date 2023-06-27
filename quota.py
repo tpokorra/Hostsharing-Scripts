@@ -15,6 +15,7 @@ def logging(filename, bashCmd):
     process = subprocess.Popen(bashCmd, stdout=outfile)
 
 logging("quota.log", ["quota", "-gs"])
+logging("diskquota.log", [os.path.join(pathlib.Path.home(), "bin", "diskquota.sh")])
 logging("du-pac-all.log", ["/usr/local/bin/du-pac"])
 logging("du-pac-greater10MB.log", [os.path.join(pathlib.Path.home(), "bin", "du-pac-greater10MB")])
 logging("pac-du-quota.log", [os.path.join(pathlib.Path.home(), "bin", "pac-du-quota")])
