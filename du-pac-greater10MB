@@ -1,0 +1,24 @@
+#!/bin/bash
+
+PAC=`id -nu`
+
+if ! [ -d ~/users ]; then
+        echo "kein ~/users Verzeichnis vorhanden - Abbruch"
+        exit 0
+fi
+
+cd ${HOME}/..
+MB=`du -sm --exclude=${PAC}/users ${PAC} |cut -f 1`
+echo "${PAC}: ${MB} MB"
+cd ${HOME}/users
+total=$MB
+for USER in *; do
+    MB=`sudo -u "${PAC}-${USER}" du -sm "${USER}" |cut -f 1`
+    total=$((total+MB))
+    if [ $MB -gt 10 ]
+    then
+      echo "${PAC}-${USER}: ${MB} MB"
+    fi
+done
+echo "Total: ${total} MB"
+quota -gs
