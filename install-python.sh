@@ -7,7 +7,7 @@ echo 'eval "$(pyenv init -)"' >> ~/.profile
 source ~/.profile
 
 # siehe https://www.python.org/downloads/
-pyenv install 3.10.13
-pyenv global 3.10
+pyenv install 3.11.7
+pyenv global 3.11
 
 python --version
