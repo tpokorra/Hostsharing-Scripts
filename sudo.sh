@@ -29,6 +29,5 @@ then
     exit -1
 fi
 
-# $HOME/.profile should have: cd ~
-sudo -u `whoami`"-$username" bash --login
+sudo -iu `whoami`"-$username"
 
