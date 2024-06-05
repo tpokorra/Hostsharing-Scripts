@@ -29,5 +29,8 @@ then
     exit -1
 fi
 
-sudo -iu `whoami`"-$username"
+# if user has bash shell
+# sudo -iu `whoami`"-$username"
 
+# $HOME/.profile should have: cd ~
+sudo -u `whoami`"-$username" bash --login
